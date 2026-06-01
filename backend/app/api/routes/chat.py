@@ -30,8 +30,25 @@ async def _event_stream(
             if isinstance(item, str):
                 payload = json.dumps({"token": item}, ensure_ascii=False)
                 yield f"data: {payload}\n\n"
+            elif isinstance(item, dict):
+                # Final item: {"citations": [...], "metrics": RAGMetrics}
+                citations = item.get("citations", [])
+                metrics = item.get("metrics")
+                serialized_citations = [
+                    {
+                        "video_id": c.video_id,
+                        "chunk_index": c.chunk_index,
+                        "chunk_text": c.chunk_text,
+                    }
+                    for c in citations
+                ]
+                done_payload = {"done": True, "sources": serialized_citations}
+                if metrics:
+                    done_payload["metrics"] = metrics.model_dump()
+                payload = json.dumps(done_payload)
+                yield f"data: {payload}\n\n"
             elif isinstance(item, list):
-                # Final citations — item is list[SourceCitation]
+                # Legacy fallback: plain list of SourceCitation
                 serialized = [
                     {
                         "video_id": c.video_id,

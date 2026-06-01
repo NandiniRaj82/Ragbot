@@ -82,9 +82,10 @@ class VideoVectorStore:
         hits: list[dict] = []
         documents = results.get("documents", [[]])[0]
         metadatas = results.get("metadatas", [[]])[0]
+        distances = results.get("distances", [[]])[0]
 
-        for doc, meta in zip(documents, metadatas):
-            hits.append({"document": doc, "metadata": meta})
+        for doc, meta, dist in zip(documents, metadatas, distances):
+            hits.append({"document": doc, "metadata": meta, "distance": dist})
 
         return hits
 
