@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 from collections import OrderedDict
 from typing import AsyncGenerator, TypedDict
 
@@ -19,7 +20,7 @@ from langgraph.graph import StateGraph, START, END
 from langgraph.checkpoint.memory import MemorySaver
 
 from app.core.config import settings
-from app.models.schemas import SourceCitation, VideoMetadata
+from app.models.schemas import RAGMetrics, SourceCitation, VideoMetadata
 from app.services.embedder_model import embed_query
 from app.services.vectorstore import vector_store
 
@@ -318,7 +319,9 @@ async def astream_rag(
         return embedding, docs
 
     logger.info("[RAG] Embedding query and retrieving docs ...")
+    retrieval_start = time.time()
     _, retrieved_docs = await loop.run_in_executor(None, _embed_and_retrieve)
+    retrieval_time_ms = (time.time() - retrieval_start) * 1000
     logger.info("[RAG] Retrieved %d docs for streaming", len(retrieved_docs))
 
     # 2. Load prior conversation history for multi-turn memory.
@@ -369,6 +372,7 @@ async def astream_rag(
 
     # Launch the blocking stream in a thread pool.
     logger.info("[RAG] Starting Gemini 2.5 Flash stream ...")
+    generation_start = time.time()
     stream_future = loop.run_in_executor(None, _stream_to_queue)
 
     # Yield tokens as they arrive from the queue.
@@ -380,7 +384,8 @@ async def astream_rag(
 
     # Ensure the streaming thread has finished.
     await stream_future
-    logger.info("[RAG] Gemini stream complete — %d chars", len("".join(full_response_parts)))
+    generation_time_ms = (time.time() - generation_start) * 1000
+    logger.info("[RAG] Gemini stream complete — %d chars in %.0fms", len("".join(full_response_parts)), generation_time_ms)
 
     # 6. Persist the new turn in LangGraph WITHOUT making a second LLM call.
     full_response = "".join(full_response_parts)
@@ -426,4 +431,40 @@ async def astream_rag(
         for doc in retrieved_docs
     ]
 
-    yield citations
+    # 8. Compute RAG evaluation metrics from retrieval distances.
+    #    ChromaDB cosine distance = 1 - cosine_similarity, so we invert.
+    distances = [doc.get("distance", 1.0) for doc in retrieved_docs]
+    if distances:
+        avg_sim = 1 - (sum(distances) / len(distances))
+        top_sim = 1 - min(distances)
+        low_sim = 1 - max(distances)
+    else:
+        avg_sim = top_sim = low_sim = 0.0
+
+    video_a_chunks = sum(
+        1 for doc in retrieved_docs
+        if doc.get("metadata", {}).get("video_id") == "A"
+    )
+    video_b_chunks = sum(
+        1 for doc in retrieved_docs
+        if doc.get("metadata", {}).get("video_id") == "B"
+    )
+
+    metrics = RAGMetrics(
+        avg_similarity=round(avg_sim, 4),
+        top_similarity=round(top_sim, 4),
+        lowest_similarity=round(low_sim, 4),
+        num_chunks_used=len(retrieved_docs),
+        video_a_chunks=video_a_chunks,
+        video_b_chunks=video_b_chunks,
+        retrieval_time_ms=round(retrieval_time_ms, 1),
+        generation_time_ms=round(generation_time_ms, 1),
+    )
+
+    logger.info(
+        "[RAG] Metrics: avg_sim=%.4f  top=%.4f  low=%.4f  A=%d  B=%d  retrieval=%.0fms  gen=%.0fms",
+        avg_sim, top_sim, low_sim, video_a_chunks, video_b_chunks,
+        retrieval_time_ms, generation_time_ms,
+    )
+
+    yield {"citations": citations, "metrics": metrics}

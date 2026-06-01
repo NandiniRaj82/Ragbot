@@ -138,6 +138,65 @@ class SourceCitation(BaseModel):
     chunk_text: str
 
 
+class RAGMetrics(BaseModel):
+    """Evaluation metrics for a single RAG retrieval + generation cycle."""
+    avg_similarity: float = Field(
+        ..., description="Average cosine similarity of retrieved chunks (0–1)"
+    )
+    top_similarity: float = Field(
+        ..., description="Highest cosine similarity among retrieved chunks"
+    )
+    lowest_similarity: float = Field(
+        ..., description="Lowest cosine similarity among retrieved chunks"
+    )
+    num_chunks_used: int = Field(
+        ..., description="Total number of chunks retrieved"
+    )
+    video_a_chunks: int = Field(
+        ..., description="Chunks sourced from Video A"
+    )
+    video_b_chunks: int = Field(
+        ..., description="Chunks sourced from Video B"
+    )
+    retrieval_time_ms: float = Field(
+        ..., description="Time taken for embedding + retrieval in milliseconds"
+    )
+    generation_time_ms: float = Field(
+        ..., description="Time taken for LLM generation in milliseconds"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Feedback
+# ---------------------------------------------------------------------------
+
+class FeedbackRequest(BaseModel):
+    """User feedback on an individual chat response."""
+    session_id: str
+    message_id: str
+    rating: Literal["up", "down"]
+    comment: Optional[str] = Field(
+        default=None, max_length=1000,
+        description="Optional free-text feedback from the user",
+    )
+
+    @field_validator("session_id")
+    @classmethod
+    def validate_fb_session_id(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("session_id must not be empty")
+        return v
+
+    @field_validator("message_id")
+    @classmethod
+    def validate_fb_message_id(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("message_id must not be empty")
+        return v
+
+
 # Resolve forward reference (IngestResponse references TranscriptInfo
 # which is defined after it above — we rebuild the model to update refs)
 IngestResponse.model_rebuild()

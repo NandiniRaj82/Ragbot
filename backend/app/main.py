@@ -28,6 +28,8 @@ from app.core.config import settings
 from app.api.routes.ingest import router as ingest_router
 from app.api.routes.chat import router as chat_router
 from app.api.routes.jobs import router as jobs_router
+from app.api.routes.feedback import router as feedback_router
+from app.api.routes.summary import router as summary_router
 
 logger = logging.getLogger(__name__)
 
@@ -115,6 +117,8 @@ async def _startup_checks():
 app.include_router(ingest_router, prefix="/api")
 app.include_router(chat_router, prefix="/api")
 app.include_router(jobs_router, prefix="/api")
+app.include_router(feedback_router, prefix="/api")
+app.include_router(summary_router, prefix="/api")
 
 # ---------------------------------------------------------------------------
 # Health check
