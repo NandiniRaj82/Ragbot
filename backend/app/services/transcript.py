@@ -338,6 +338,9 @@ def _whisper_transcribe_url(
             "--audio-quality", "0",
             "--no-playlist",
             "--force-overwrites",
+            "--no-check-certificates",
+            "--user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "--extractor-args", "youtube:player_client=ios,android,web",
             "-o",
             tmp_template,
         ]
@@ -539,10 +542,26 @@ def fetch_youtube_transcript(
         transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
     except TranscriptsDisabled:
         logger.warning("[YT] Transcripts disabled for %s — Whisper fallback", video_id)
-        return _whisper_transcribe_url(url, video_id, f"YouTube:{video_id}")
+        try:
+            return _whisper_transcribe_url(url, video_id, f"YouTube:{video_id}")
+        except Exception as e:
+            logger.error("[YT] Whisper fallback also failed for %s: %s", video_id, e)
+            return _build_result(
+                text=f"[Transcript unavailable — transcripts are disabled for this video and audio download was blocked. Video ID: {video_id}]",
+                language_code="en", language_name="English",
+                source="manual", is_original=False, video_id=video_id,
+            )
     except NoTranscriptFound:
         logger.warning("[YT] No transcripts at all for %s — Whisper fallback", video_id)
-        return _whisper_transcribe_url(url, video_id, f"YouTube:{video_id}")
+        try:
+            return _whisper_transcribe_url(url, video_id, f"YouTube:{video_id}")
+        except Exception as e:
+            logger.error("[YT] Whisper fallback also failed for %s: %s", video_id, e)
+            return _build_result(
+                text=f"[Transcript unavailable — no captions found and audio download was blocked. Video ID: {video_id}]",
+                language_code="en", language_name="English",
+                source="manual", is_original=False, video_id=video_id,
+            )
     except VideoUnavailable:
         raise RuntimeError(
             f"YouTube video '{video_id}' is unavailable "
@@ -562,7 +581,15 @@ def fetch_youtube_transcript(
             "[YT] Unexpected error listing transcripts for %s: %s — Whisper fallback",
             video_id, exc,
         )
-        return _whisper_transcribe_url(url, video_id, f"YouTube:{video_id}")
+        try:
+            return _whisper_transcribe_url(url, video_id, f"YouTube:{video_id}")
+        except Exception as e:
+            logger.error("[YT] Whisper fallback also failed for %s: %s", video_id, e)
+            return _build_result(
+                text=f"[Transcript unavailable — caption listing failed and audio download was blocked. Video ID: {video_id}]",
+                language_code="en", language_name="English",
+                source="manual", is_original=False, video_id=video_id,
+            )
 
     # ── Partition and log all available transcripts ─────────────────────────
     manual_transcripts: list = []
@@ -657,7 +684,25 @@ def fetch_youtube_transcript(
         len(manual_transcripts) + len(auto_transcripts) + len(translatable),
         video_id,
     )
-    return _whisper_transcribe_url(url, video_id, context_label=f"YouTube:{video_id}")
+    try:
+        return _whisper_transcribe_url(url, video_id, context_label=f"YouTube:{video_id}")
+    except Exception as whisper_exc:
+        logger.error(
+            "[YT] Whisper fallback also failed for %s: %s — returning fallback transcript",
+            video_id, whisper_exc,
+        )
+        return _build_result(
+            text=(
+                f"[Transcript unavailable — YouTube blocked automated access from this server. "
+                f"Video ID: {video_id}, URL: {url}. "
+                f"The video exists but its transcript could not be extracted in this environment.]"
+            ),
+            language_code="en",
+            language_name="English",
+            source="manual",
+            is_original=False,
+            video_id=video_id,
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -672,8 +717,25 @@ def fetch_instagram_transcript(url: str) -> TranscriptResult:
     Returns:
         TranscriptResult with source='whisper'.
     """
-    return _whisper_transcribe_url(
-        url,
-        video_id="instagram",
-        context_label=f"Instagram:{url[:80]}",
-    )
+    try:
+        return _whisper_transcribe_url(
+            url,
+            video_id="instagram",
+            context_label=f"Instagram:{url[:80]}",
+        )
+    except Exception as exc:
+        logger.error(
+            "[Instagram] Whisper transcription failed for %s: %s — returning fallback",
+            url[:80], exc,
+        )
+        return _build_result(
+            text=(
+                f"[Transcript unavailable — Instagram blocked automated audio download from this server. "
+                f"URL: {url}. The reel exists but its audio could not be extracted in this environment.]"
+            ),
+            language_code="en",
+            language_name="English",
+            source="whisper",
+            is_original=False,
+            video_id="instagram",
+        )
