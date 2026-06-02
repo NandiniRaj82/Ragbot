@@ -6,8 +6,8 @@ RUN npm ci
 
 COPY . .
 
-# Railway injects this as a build-time variable (default to the production backend URL)
-ARG NEXT_PUBLIC_API_URL=https://ragbot-production-f48d.up.railway.app
+# Railway injects this as a build-time variable
+ARG NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 
 RUN npm run build
@@ -19,7 +19,6 @@ FROM node:20-alpine AS runner
 
 WORKDIR /app
 ENV NODE_ENV=production
-ENV BACKEND_URL=https://ragbot-production-f48d.up.railway.app
 
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static

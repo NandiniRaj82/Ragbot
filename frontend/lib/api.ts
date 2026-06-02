@@ -1,36 +1,9 @@
 // ---------------------------------------------------------------------------
-// API base URL — resolves at runtime so it works on any deployment.
-//
-// Priority:
-//   1. NEXT_PUBLIC_API_URL baked at build time (if Docker ARG worked)
-//   2. Hardcoded production backend URL on deployed sites to bypass Next.js rewrites
-//   3. http://localhost:8000 for local development
+// API base URL — always point directly at the FastAPI backend.
+// Set NEXT_PUBLIC_API_URL in .env.local to override for production.
 // ---------------------------------------------------------------------------
-function resolveApiBase(): string {
-  // Build-time env var
-  const envUrl = process.env.NEXT_PUBLIC_API_URL;
-  if (envUrl && envUrl !== "http://localhost:8000") {
-    return envUrl.replace(/\/+$/, "");
-  }
-
-  // In the browser on a deployed site, use the hardcoded production backend URL
-  // directly. This completely bypasses any potential Next.js rewrite issues.
-  if (typeof window !== "undefined") {
-    // Check for runtime injection via window object
-    if ((window as any).__BACKEND_URL__) {
-      return (window as any).__BACKEND_URL__;
-    }
-
-    const h = window.location.hostname;
-    if (h !== "localhost" && h !== "127.0.0.1") {
-      return "https://ragbot-production-f48d.up.railway.app";
-    }
-  }
-
-  return "http://localhost:8000";
-}
-
-export const API_BASE = resolveApiBase();
+export const API_BASE =
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 // ---------------------------------------------------------------------------
 // TypeScript interfaces matching backend Pydantic models
