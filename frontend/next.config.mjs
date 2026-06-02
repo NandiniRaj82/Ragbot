@@ -3,12 +3,14 @@ const nextConfig = {
   // Required for the multi-stage Docker build which copies .next/standalone
   output: "standalone",
 
-  // Proxy /api/* → backend so dev never hits CORS
+  // Proxy /api/* → backend so the browser never needs to know the backend URL.
+  // BACKEND_URL is a server-side env var set at runtime in Docker.
   async rewrites() {
+    const backend = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || "https://ragbot-production-f48d.up.railway.app";
     return [
       {
         source: "/api/:path*",
-        destination: `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/:path*`,
+        destination: `${backend}/api/:path*`,
       },
     ];
   },
