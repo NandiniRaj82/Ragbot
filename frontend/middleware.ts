@@ -7,10 +7,15 @@ export function middleware(request: NextRequest) {
   // Only rewrite requests starting with /api/
   if (pathname.startsWith("/api/")) {
     // Read the backend URL at runtime (injected by Railway to the running container)
-    const backendUrl =
+    let backendUrl =
       process.env.NEXT_PUBLIC_API_URL ||
       process.env.BACKEND_URL ||
       "http://localhost:8000";
+
+    // Automatically prepend https:// if protocol is missing (e.g. "ragbot-backend-production.up.railway.app")
+    if (backendUrl && !backendUrl.startsWith("http://") && !backendUrl.startsWith("https://")) {
+      backendUrl = "https://" + backendUrl;
+    }
 
     // Construct the new target URL pointing to the backend service
     const targetUrl = new URL(pathname + search, backendUrl);
