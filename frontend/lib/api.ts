@@ -1,9 +1,21 @@
 // ---------------------------------------------------------------------------
-// API base URL — always point directly at the FastAPI backend.
-// Set NEXT_PUBLIC_API_URL in .env.local to override for production.
+// API base URL — resolves dynamically at runtime.
+//
+// In local development (localhost), it calls the backend directly on port 8000.
+// On deployed sites, it returns a relative URL ("") so Next.js middleware
+// can dynamically proxy the requests to the backend at runtime.
 // ---------------------------------------------------------------------------
-export const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+function resolveApiBase(): string {
+  if (typeof window !== "undefined") {
+    const h = window.location.hostname;
+    if (h === "localhost" || h === "127.0.0.1") {
+      return "http://localhost:8000";
+    }
+  }
+  return "";
+}
+
+export const API_BASE = resolveApiBase();
 
 // ---------------------------------------------------------------------------
 // TypeScript interfaces matching backend Pydantic models
