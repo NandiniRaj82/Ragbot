@@ -82,20 +82,20 @@ def fetch_metadata(url: str, video_id: str) -> VideoMetadata:
             result.returncode, url
         )
         
-        # Fail-safe Fallback: If YouTube rate-limits/blocks datacenter IP, generate mock metadata and continue
+        # Fail-safe Fallback: If YouTube rate-limits/blocks datacenter IP, generate fallback metadata and continue
         if "youtube.com" in url or "youtu.be" in url:
             yt_id = extract_youtube_id(url) or "unknown"
             thumbnail_url = f"https://img.youtube.com/vi/{yt_id}/0.jpg" if yt_id != "unknown" else ""
             return VideoMetadata(
                 video_id=video_id,
                 url=url,
-                title="YouTube Video (Metadata Fallback)",
+                title=f"YouTube Short ({yt_id})",
                 creator="YouTube Creator",
                 follower_count=0,
-                views=1000,
-                likes=100,
-                comments=10,
-                engagement_rate=11.0,
+                views=0,
+                likes=0,
+                comments=0,
+                engagement_rate=0.0,
                 hashtags=[],
                 upload_date="unknown",
                 duration_seconds=60,
@@ -106,13 +106,13 @@ def fetch_metadata(url: str, video_id: str) -> VideoMetadata:
             return VideoMetadata(
                 video_id=video_id,
                 url=url,
-                title="Instagram Reel (Metadata Fallback)",
+                title=f"Instagram Reel ({ig_id})",
                 creator="Instagram Creator",
                 follower_count=0,
-                views=1000,
-                likes=100,
-                comments=10,
-                engagement_rate=11.0,
+                views=0,
+                likes=0,
+                comments=0,
+                engagement_rate=0.0,
                 hashtags=[],
                 upload_date="unknown",
                 duration_seconds=30,
