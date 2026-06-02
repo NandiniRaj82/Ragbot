@@ -11,6 +11,12 @@ function resolveApiBase(): string {
     if (h === "localhost" || h === "127.0.0.1") {
       return "http://localhost:8000";
     }
+
+    // Dynamic Resolution: Automatically derive backend URL from frontend URL
+    // e.g. "ragbot-frontend-production.up.railway.app" -> "https://ragbot-backend-production.up.railway.app"
+    if (h.includes("-frontend-")) {
+      return "https://" + h.replace("-frontend-", "-backend-");
+    }
   }
   return "";
 }
