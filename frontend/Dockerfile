@@ -6,6 +6,8 @@ RUN npm ci
 
 COPY . .
 RUN npm run build
+# Ensure public dir exists even if empty
+RUN mkdir -p /app/public
 
 # ---- Production image ----
 FROM node:20-alpine AS runner
@@ -21,4 +23,4 @@ ENV HOSTNAME="0.0.0.0"
 ENV PORT=3000
 EXPOSE ${PORT}
 
-CMD node server.js
+CMD ["node", "server.js"]

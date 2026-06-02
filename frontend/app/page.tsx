@@ -23,10 +23,6 @@ export default function LandingPage() {
 
       {/* Hero */}
       <section className="hero">
-        <div className="hero-badge">
-          <span className="hero-badge-dot" />
-          Powered by Gemini 2.5 Flash
-        </div>
         <h1>Understand any video with AI-powered transcript analysis</h1>
         <p className="hero-subtitle">
           Paste a YouTube and Instagram URL. Get instant transcript extraction,
@@ -145,7 +141,7 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="footer">
         <p>
-          Built with FastAPI, Next.js, Gemini 2.5 Flash, and ChromaDB. 
+          Built with FastAPI, Next.js, Gemini 2.5 Flash, and ChromaDB.
           Local embeddings powered by Sentence Transformers.
         </p>
       </footer>
