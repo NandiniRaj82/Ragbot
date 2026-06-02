@@ -66,6 +66,7 @@ if settings.FRONTEND_URL not in _ALLOWED_ORIGINS:
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_ALLOWED_ORIGINS,
+    allow_origin_regex=r"https://.*\.up\.railway\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
