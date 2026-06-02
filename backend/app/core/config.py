@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     )
 
     GEMINI_API_KEY: str
+    YOUTUBE_API_KEY: str = ""  # Optional: enables YouTube Data API v3 for real metadata
     CHROMA_DB_PATH: str = "./chroma_db"
     FRONTEND_URL: str = "http://localhost:3000"
     MAX_VIDEO_DURATION_SECONDS: int = 1800  # 30 minutes
