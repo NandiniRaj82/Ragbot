@@ -5,6 +5,11 @@ COPY package.json package-lock.json* ./
 RUN npm ci
 
 COPY . .
+
+# Railway injects this as a build-time variable
+ARG NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+
 RUN npm run build
 # Ensure public dir exists even if empty
 RUN mkdir -p /app/public
