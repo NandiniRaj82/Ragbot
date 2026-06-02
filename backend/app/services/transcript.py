@@ -331,34 +331,38 @@ def _whisper_transcribe_url(
         # ── Download audio ──────────────────────────────────────────────
         logger.info("[Whisper] Step 2/6: Downloading audio for %s into %s", context_label, tmp_dir)
 
-        cmd = [
-            "yt-dlp",
-            "--extract-audio",
-            "--audio-format", "mp3",
-            "--audio-quality", "0",
-            "--no-playlist",
-            "--force-overwrites",
-            "--no-check-certificates",
-            "--user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            "--extractor-args", "youtube:player_client=ios,android,web",
-            "-o",
-            tmp_template,
-        ]
+        from app.services.cookies import get_yt_dlp_cookies_opt
 
-        if ffmpeg_location:
-            cmd.extend(["--ffmpeg-location", ffmpeg_location])
+        with get_yt_dlp_cookies_opt() as cookies_opts:
+            cmd = [
+                "yt-dlp",
+                "--extract-audio",
+                "--audio-format", "mp3",
+                "--audio-quality", "0",
+                "--no-playlist",
+                "--force-overwrites",
+                "--no-check-certificates",
+                "--user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                "--extractor-args", "youtube:player_client=ios,android,web",
+                "-o",
+                tmp_template,
+            ]
+            cmd.extend(cookies_opts)
 
-        cmd.append(url)
-        logger.info("[Whisper] Running command: %s", " ".join(cmd))
+            if ffmpeg_location:
+                cmd.extend(["--ffmpeg-location", ffmpeg_location])
 
-        dl_start = time.time()
-        result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            timeout=180,
-        )
-        dl_elapsed = time.time() - dl_start
+            cmd.append(url)
+            logger.info("[Whisper] Running command: %s", " ".join(cmd))
+
+            dl_start = time.time()
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=180,
+            )
+            dl_elapsed = time.time() - dl_start
 
         logger.info(
             "[Whisper] yt-dlp finished in %.1fs — exit_code=%d",

@@ -209,12 +209,22 @@ def _fetch_instagram_oembed_metadata(
 ) -> VideoMetadata | None:
     """
     Try the Instagram oEmbed endpoint for basic metadata.
-    Note: Instagram may require an access token for this.
+    Supports INSTAGRAM_ACCESS_TOKEN for Meta Graph API.
     """
-    oembed_url = (
-        f"https://www.instagram.com/api/v1/oembed"
-        f"?url={urllib.parse.quote(url, safe='')}"
-    )
+    access_token = os.environ.get("INSTAGRAM_ACCESS_TOKEN", "")
+    if access_token:
+        # Use official Facebook Graph API oEmbed
+        oembed_url = (
+            f"https://graph.facebook.com/v10.0/instagram_oembed"
+            f"?url={urllib.parse.quote(url, safe='')}"
+            f"&access_token={access_token}"
+        )
+    else:
+        # Fallback to keyless
+        oembed_url = (
+            f"https://www.instagram.com/api/v1/oembed"
+            f"?url={urllib.parse.quote(url, safe='')}"
+        )
 
     try:
         req = urllib.request.Request(
@@ -278,21 +288,27 @@ def fetch_metadata(url: str, video_id: str) -> VideoMetadata:
     fetch_start = time.time()
     
     # ── Tier 1: yt-dlp (best data, but blocked on datacenter IPs) ──────────
+    from app.services.cookies import get_yt_dlp_cookies_opt
+
     try:
-        result = subprocess.run(
-            [
+        with get_yt_dlp_cookies_opt() as cookies_opts:
+            cmd = [
                 "yt-dlp",
                 "--dump-json",
                 "--no-playlist",
                 "--no-check-certificates",
                 "--user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
                 "--extractor-args", "youtube:player_client=ios,android,web",
-                url
-            ],
-            capture_output=True,
-            text=True,
-            timeout=60,
-        )
+            ]
+            cmd.extend(cookies_opts)
+            cmd.append(url)
+            
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=60,
+            )
     except FileNotFoundError:
         logger.warning("[Metadata] yt-dlp not found — trying API fallbacks")
         result = None
